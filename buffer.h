@@ -14,6 +14,8 @@ class Buffer {
         void insertNewLine(int row, int col);
         std::string getLine(int row);
         int getLineCount();
+        void clear();
+        void addLine(const std::string& line);
 };
 
 #endif

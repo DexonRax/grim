@@ -38,3 +38,11 @@ std::string Buffer::getLine(int row){
 int Buffer::getLineCount(){
     return m_lines.size();
 }
+
+void Buffer::clear() {
+    m_lines.clear();
+}
+
+void Buffer::addLine(const std::string& line) {
+    m_lines.push_back(line);
+}

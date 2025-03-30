@@ -11,8 +11,11 @@ class Grim {
         int m_cursorRow;
         int m_cursorCol;
         char m_mode;
+        std::string m_filename;
+
     public:
         Grim();
+        Grim(const std::string &filename = "");
         void run();
 };
 

@@ -4,6 +4,26 @@ Grim::Grim()
     : m_cursorRow(0), m_cursorCol(0), m_mode('n') 
 {}
 
+Grim::Grim(const std::string &filename)
+    : m_cursorRow(0), m_cursorCol(0), m_mode('n')
+{
+    // If a filename was passed, attempt to open and load it.
+    
+    if (!filename.empty() && filename != "") {
+        m_filename = filename;
+        std::ifstream file(filename);
+        if (file.is_open()) {
+            // Clear the buffer before loading new content.
+            m_Buffer.clear();
+            std::string line;
+            // Read each line from the file and append it.
+            while (std::getline(file, line)) {
+                m_Buffer.addLine(line);
+            }
+        }
+        // If file fails to open, you might want to show an error message here.
+    }
+}
 void Grim::run(){
     initscr();
     raw();
@@ -31,11 +51,13 @@ void Grim::run(){
             } else if(ch == 'i'){
                 m_mode = 'i';
             } else if(ch == 's'){
-                std::ofstream file("text.txt");
-                for(int row = 0; row < m_Buffer.getLineCount(); row++){
-                    file << m_Buffer.getLine(row) << "\n";
+                if(m_filename != ""){
+                    std::ofstream file(m_filename);
+                    for(int row = 0; row < m_Buffer.getLineCount(); row++){
+                        file << m_Buffer.getLine(row) << "\n";
+                    }
+                    file.close();
                 }
-                file.close();
             }
         } else if(m_mode == 'i'){
             if(ch == 27){ // ESC to exit insert mode
