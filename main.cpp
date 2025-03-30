@@ -1,129 +1,154 @@
 #include <ncurses.h>
-#include <iostream>
+#include <vector>
+#include <string>
+#include <fstream>
+#include <algorithm>
 
-class Buffer{
-    private:
-        int m_size;
-        char *m_buffer;
-        int m_length;
-
-    public:
-        Buffer(){
-            m_size = 1024;
-            m_buffer = new char[1024];
-            m_length = 0;
-            
-            for(int i = 0; i < m_size; i++){
-                m_buffer[i] = '\0';
+class Buffer {
+private:
+    std::vector<std::string> m_lines;
+public:
+    Buffer(){
+        m_lines.push_back(""); // Start with one empty line
+    }
+    void insertChar(char ch, int row, int col){
+        if(row >= 0 && row < m_lines.size()){
+            if(col >= 0 && col <= (int)m_lines[row].length()){
+                m_lines[row].insert(col, 1, ch);
             }
         }
-        void insertChar(char ch, int i){
-            if(i >= 0 && i < m_size){
-                for(int x = m_length; x > i; x--){
-                    m_buffer[x] = m_buffer[x-1];
-                }
-                m_buffer[i] = ch;
-                m_length++;
+    }
+    void insertString(const std::string& str, int row, int col){
+        if(row >= 0 && row < m_lines.size()){
+            if(col >= 0 && col <= (int)m_lines[row].length()){
+                m_lines[row].insert(col, str);
             }
         }
-
-        void removeChar(int i){
-            if(i >= 0 && i < m_size){
-                int buffer_char_end = 0;
-                for(int x = i; x < m_length; x++){
-                    m_buffer[x] = m_buffer[x+1];
-                }
-                m_length--;  
-            }   
+    }
+    void removeChar(int row, int col){
+        if(row >= 0 && row < m_lines.size() && col > 0 && col <= (int)m_lines[row].length()){
+            m_lines[row].erase(col - 1, 1);
         }
-        int getSize(){
-            return m_size;
+    }
+    void insertNewLine(int row, int col){
+        if(row >= 0 && row < m_lines.size()){
+            std::string newLine = m_lines[row].substr(col);
+            m_lines[row] = m_lines[row].substr(0, col);
+            m_lines.insert(m_lines.begin() + row + 1, newLine);
         }
-        char* getBuffer(){
-            return m_buffer;
+    }
+    std::string getLine(int row){
+        if(row >= 0 && row < m_lines.size()){
+            return m_lines[row];
         }
-        int getLength(){
-            return m_length;
-        }
+        return "";
+    }
+    int getLineCount(){
+        return m_lines.size();
+    }
 };
 
-class Grim{
+class Grim {
+private:
+    Buffer m_Buffer;
+    int m_cursorRow;
+    int m_cursorCol;
+    char m_mode;
+public:
+    Grim(): m_cursorRow(0), m_cursorCol(0), m_mode('n') {}
+    void run(){
+        initscr();
+        raw();
+        set_escdelay(25);
+        noecho();
+        curs_set(1);  // Ensure the cursor is enabled
 
-    private:
-        Buffer m_Buffer;
-        int m_cursorPos;
-        char m_mode; 
+        int rows, cols;
+        getmaxyx(stdscr, rows, cols);
+        // Create subwindows which share stdscr's memory:
+        WINDOW* mainWin = subwin(stdscr, rows - 1, cols, 0, 0);
+        WINDOW* footer = subwin(stdscr, 1, cols, rows - 1, 0);
 
-    public:
-        Grim(){
-            m_cursorPos = 0;
-            m_mode = 'n';
-        }
+        // Enable keypad on mainWin so it can properly interpret special keys.
+        keypad(mainWin, TRUE);
 
-        void run(){
-            initscr();
-            initscr();
-            set_escdelay(25);
-            raw();
-            keypad(stdscr, TRUE);
-            noecho();
-
-            int rows, cols;
-            getmaxyx(stdscr, rows, cols);
-            WINDOW* footer = newwin(1, cols, rows - 1, 0);
-
-            mvprintw(0, 0, "GRIM Text Editor v0.1");
-            mvprintw(1, 0, "Press Enter...");
-
-            int ch;
-            while ((ch = getch())){
-                if(m_mode == 'n'){
-                    if(ch == 27){
-                        break;
-                    }else if(ch == 'i'){
-                        m_mode = 'i';
+        int ch;
+        while ((ch = wgetch(mainWin))) {
+            if(m_mode == 'n'){
+                if(ch == 27){ // ESC exits
+                    break;
+                } else if(ch == 'i'){
+                    m_mode = 'i';
+                } else if(ch == 's'){
+                    std::ofstream file("text.txt");
+                    for(int row = 0; row < m_Buffer.getLineCount(); row++){
+                        file << m_Buffer.getLine(row) << "\n";
                     }
-                }else if(m_mode == 'i'){
-                    if(ch == 27){
-                        m_mode = 'n';
-                    }else if(ch == KEY_BACKSPACE){
-                        if(m_cursorPos > 0){
-                            m_cursorPos--;
-                            m_Buffer.removeChar(m_cursorPos);
-                        }
-                    }else if(ch == KEY_RIGHT){
-                        if(m_cursorPos < m_Buffer.getLength()){
-                            m_cursorPos++;       
-                        }
-                    }else if(ch == KEY_LEFT){
-                        if(m_cursorPos > 0){
-                            m_cursorPos--;
-                        }
-                    }else if(ch == 10){
-                        m_Buffer.insertChar('\n', m_cursorPos);
-                    }else if(ch >= 32){
-                        m_Buffer.insertChar(ch, m_cursorPos);
-                        m_cursorPos++;
-                    }
+                    file.close();
                 }
-                
-                
-                
-                clear();
-                mvprintw(0, 0, m_Buffer.getBuffer());
-                move(0, m_cursorPos);
-                refresh();
-                wclear(footer);
-                wattron(footer, A_REVERSE);
-                mvwprintw(footer, 0, 0, "Mode: %c | Footer: Press ESC to exit | Last pressed char: %c", m_mode, ch);
-                wattroff(footer, A_REVERSE);
-                wrefresh(footer);  // Now update the footer on top
-                
-                refresh();
+            } else if(m_mode == 'i'){
+                if(ch == 27){ // ESC to exit insert mode
+                    m_mode = 'n';
+                } else if(ch == KEY_BACKSPACE){
+                    if(m_cursorCol > 0){
+                        m_Buffer.removeChar(m_cursorRow, m_cursorCol);
+                        m_cursorCol--;
+                    }
+                } else if(ch == KEY_RIGHT){
+                    if(m_cursorCol < (int)m_Buffer.getLine(m_cursorRow).length()){
+                        m_cursorCol++;
+                    }
+                } else if(ch == KEY_LEFT){
+                    if(m_cursorCol > 0){
+                        m_cursorCol--;
+                    }
+                } else if(ch == KEY_UP){
+                    if(m_cursorRow > 0){
+                        m_cursorRow--;
+                        m_cursorCol = std::min((int)m_Buffer.getLine(m_cursorRow).length(), m_cursorCol);
+                    }
+                } else if(ch == KEY_DOWN){
+                    if(m_cursorRow < m_Buffer.getLineCount() - 1){
+                        m_cursorRow++;
+                        m_cursorCol = std::min((int)m_Buffer.getLine(m_cursorRow).length(), m_cursorCol);
+                    }
+                } else if(ch == 10){ // Enter key
+                    m_Buffer.insertNewLine(m_cursorRow, m_cursorCol);
+                    m_cursorRow++;
+                    m_cursorCol = 0;
+                } else if(ch == 9){ // Tab key
+                    std::string tab = "    ";
+                    m_Buffer.insertString(tab, m_cursorRow, m_cursorCol);
+                    m_cursorCol += tab.length();
+                } else if(ch >= 32){
+                    m_Buffer.insertChar(ch, m_cursorRow, m_cursorCol);
+                    m_cursorCol++;
+                }
             }
-            endwin();
-            std::cout << m_cursorPos << "\n";
+
+            // Clear and redraw the main window with the text buffer
+            wclear(mainWin);
+            for(int row = 0; row < m_Buffer.getLineCount(); row++){
+                mvwprintw(mainWin, row, 0, m_Buffer.getLine(row).c_str());
+            }
+            // Position the cursor in the main window and refresh it
+            wmove(mainWin, m_cursorRow, m_cursorCol);
+            wrefresh(mainWin);
+
+            // Update the footer window with status info and refresh it
+            wclear(footer);
+            wattron(footer, A_REVERSE);
+            mvwprintw(footer, 0, 0, "Mode: %c | Cursor: %d, %d", m_mode, m_cursorRow, m_cursorCol);
+            wattroff(footer, A_REVERSE);
+            wrefresh(footer);
+
+            // Update the hardware cursor position on stdscr
+            move(m_cursorRow, m_cursorCol);
+            refresh();
+
         }
+        endwin();
+    }
 };
 
 int main() {
