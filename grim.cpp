@@ -8,7 +8,10 @@ Grim::Grim(const std::string &filename)
     : m_cursorRow(0), m_cursorCol(0), m_mode('n')
 {
     // If a filename was passed, attempt to open and load it.
-    
+    openFile(filename);
+}
+
+void Grim::openFile(const std::string &filename){
     if (!filename.empty() && filename != "") {
         m_filename = filename;
         std::ifstream file(filename);
@@ -49,28 +52,44 @@ void Grim::run(){
     // Enable keypad on mainWin so it can properly interpret special keys.
     keypad(mainWin, TRUE);
 
-    mvwprintw(mainWin, 0, 0, "GRIM Text Editor v0.4");
+    mvwprintw(mainWin, 0, 0, "GRIM Text Editor v0.5");
     mvwprintw(mainWin, 1, 0, "Press Enter...");
 
     std::string saveFilename = "";
+    std::string openFilename = "";
     int ch;
     while ((ch = wgetch(mainWin))) {
         if(m_mode == 'n'){
             if(ch == 27){ // ESC exits
                 break;
-            } else if(ch == 'i'){
+            }else if(ch == 'i'){
                 m_mode = 'i';
-            } else if(ch == 's'){
+            }else if(ch == 's'){
                 m_mode = 's';
                 saveFilename = m_filename;
+            }else if(ch == 'o'){
+                m_mode = 'o';
+            }
+        }else if(m_mode == 'o'){
+            if(ch == KEY_BACKSPACE){
+                if(openFilename.size() > 0)
+                    openFilename = openFilename.substr(0, openFilename.size()-1);
+            }else if(ch >= 32){
+                openFilename += ch;
+            }else if(ch == 10){ //Enter key
+                openFile(openFilename);
+                openFilename = "";
+                m_mode = 'n';
             }
         }else if(m_mode == 's'){
-            if(ch >= 32){
+            if(ch == KEY_BACKSPACE){
+                if(saveFilename.size() > 0)
+                    saveFilename = saveFilename.substr(0, saveFilename.size()-1);
+            }else if(ch >= 32){
                 saveFilename += ch;
-            }else if(ch == KEY_BACKSPACE){
-                saveFilename = saveFilename.substr(0, saveFilename.size()-1);
             }else if(ch == 10){
                 saveFile(saveFilename);
+                m_filename = saveFilename;
                 m_mode = 'n';
             }
         }else if(m_mode == 'i'){
@@ -80,6 +99,9 @@ void Grim::run(){
                 if(m_cursorCol > 0){
                     m_Buffer.removeChar(m_cursorRow, m_cursorCol);
                     m_cursorCol--;
+                }else{
+                    m_cursorRow--;
+                    m_cursorCol = std::max((int)m_Buffer.getLine(m_cursorRow).length(), m_cursorCol);
                 }
             } else if(ch == KEY_RIGHT){
                 if(m_cursorCol < (int)m_Buffer.getLine(m_cursorRow).length()){
@@ -128,6 +150,8 @@ void Grim::run(){
 
         if(m_mode == 's'){
             mvwprintw(footer, 0, 0, "Filename: %s", saveFilename.c_str());
+        }else if(m_mode == 'o'){
+            mvwprintw(footer, 0, 0, "Filename: %s", openFilename.c_str());
         }else{
             mvwprintw(footer, 0, 0, "Mode: %c | Cursor: %d, %d", m_mode, m_cursorRow, m_cursorCol);
         }
