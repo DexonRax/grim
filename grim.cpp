@@ -24,6 +24,15 @@ Grim::Grim(const std::string &filename)
         // If file fails to open, you might want to show an error message here.
     }
 }
+
+void Grim::saveFile(const std::string &filename){
+    std::ofstream file(filename);
+    for(int row = 0; row < m_Buffer.getLineCount(); row++){
+        file << m_Buffer.getLine(row) << "\n";
+    }
+    file.close();
+}
+
 void Grim::run(){
     initscr();
     raw();
@@ -40,9 +49,10 @@ void Grim::run(){
     // Enable keypad on mainWin so it can properly interpret special keys.
     keypad(mainWin, TRUE);
 
-    mvwprintw(mainWin, 0, 0, "GRIM Text Editor v0.3");
+    mvwprintw(mainWin, 0, 0, "GRIM Text Editor v0.4");
     mvwprintw(mainWin, 1, 0, "Press Enter...");
 
+    std::string saveFilename = "";
     int ch;
     while ((ch = wgetch(mainWin))) {
         if(m_mode == 'n'){
@@ -51,15 +61,19 @@ void Grim::run(){
             } else if(ch == 'i'){
                 m_mode = 'i';
             } else if(ch == 's'){
-                if(m_filename != ""){
-                    std::ofstream file(m_filename);
-                    for(int row = 0; row < m_Buffer.getLineCount(); row++){
-                        file << m_Buffer.getLine(row) << "\n";
-                    }
-                    file.close();
-                }
+                m_mode = 's';
+                saveFilename = m_filename;
             }
-        } else if(m_mode == 'i'){
+        }else if(m_mode == 's'){
+            if(ch >= 32){
+                saveFilename += ch;
+            }else if(ch == KEY_BACKSPACE){
+                saveFilename = saveFilename.substr(0, saveFilename.size()-1);
+            }else if(ch == 10){
+                saveFile(saveFilename);
+                m_mode = 'n';
+            }
+        }else if(m_mode == 'i'){
             if(ch == 27){ // ESC to exit insert mode
                 m_mode = 'n';
             } else if(ch == KEY_BACKSPACE){
@@ -111,7 +125,13 @@ void Grim::run(){
         // Update the footer window with status info and refresh it
         wclear(footer);
         wattron(footer, A_REVERSE);
-        mvwprintw(footer, 0, 0, "Mode: %c | Cursor: %d, %d", m_mode, m_cursorRow, m_cursorCol);
+
+        if(m_mode == 's'){
+            mvwprintw(footer, 0, 0, "Filename: %s", saveFilename.c_str());
+        }else{
+            mvwprintw(footer, 0, 0, "Mode: %c | Cursor: %d, %d", m_mode, m_cursorRow, m_cursorCol);
+        }
+        
         wattroff(footer, A_REVERSE);
         wrefresh(footer);
 
