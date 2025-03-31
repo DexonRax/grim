@@ -12,9 +12,9 @@ class Grim {
         int m_cursorCol;
         char m_mode;
         std::string m_filename;
+        std::string m_version;
 
     public:
-        Grim();
         Grim(const std::string&);
         void run();
         void saveFile(const std::string&);

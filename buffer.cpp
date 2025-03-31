@@ -46,3 +46,9 @@ void Buffer::clear() {
 void Buffer::addLine(const std::string& line) {
     m_lines.push_back(line);
 }
+
+void Buffer::removeLine(int i){
+    if (i >= 0 && i < m_lines.size()) {
+        m_lines.erase(m_lines.begin() + i);
+    }
+}
