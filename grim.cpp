@@ -1,7 +1,7 @@
 #include "grim.h"
 
 Grim::Grim(const std::string &filename)
-    : m_cursorRow(0), m_cursorCol(0), m_mode('n'), m_version("v0.7")
+    : m_cursorRow(0), m_cursorCol(0), m_mode('n'), m_version("v0.8")
 {
     m_filename.clear();
     // If a filename was passed, attempt to open and load it.
