@@ -13,4 +13,5 @@ all:
 	@echo "Done."
 
 run:
-	build/main.out
+	build/grim
+

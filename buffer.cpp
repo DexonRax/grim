@@ -1,7 +1,7 @@
 #include "buffer.h"
 
 Buffer::Buffer(){
-    m_lines.push_back(""); // Start with one empty line
+    //m_lines.push_back("");
 }
 void Buffer::insertChar(char ch, int row, int col){
     if(row >= 0 && row < m_lines.size()){

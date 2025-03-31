@@ -5,6 +5,7 @@ Grim::Grim(const std::string &filename)
 {
     m_filename.clear();
     // If a filename was passed, attempt to open and load it.
+    
     openFile(filename);
 }
 
@@ -24,6 +25,7 @@ void Grim::openFile(const std::string &filename){
         //TODO: If file fails to open, you might want to show an error message here.
     }else{
         m_Buffer.clear();
+        m_Buffer.addLine("");
         m_filename.clear();
     }
 }
@@ -39,7 +41,8 @@ void Grim::saveFile(const std::string &filename){
 
 void Grim::run(){
     initscr();
-    raw();
+    //raw();
+    cbreak();
     set_escdelay(25);
     noecho();
     curs_set(1);  // Ensure the cursor is enabled
@@ -58,7 +61,7 @@ void Grim::run(){
 
     std::string saveFilename = "";
     std::string openFilename = "";
-    int ch;
+    char ch;
     while ((ch = wgetch(mainWin))) {
         if(m_mode == 'n'){
             if(ch == 27){ // ESC exits
@@ -70,23 +73,23 @@ void Grim::run(){
                 saveFilename = m_filename;
             }else if(ch == 'o'){
                 m_mode = 'o';
-            }else if(ch == KEY_RIGHT){
+            }else if(ch == KEY_RIGHT || ch == 5){
                 if(m_cursorCol < (int)m_Buffer.getLine(m_cursorRow).length()){
                     m_cursorCol++;
                 }else if(m_Buffer.getLineCount()-1 > m_cursorRow){
                     m_cursorRow++;
                     m_cursorCol = 0;
                 }
-            }else if(ch == KEY_LEFT){
+            }else if(ch == KEY_LEFT || ch == 4){
                 if(m_cursorCol > 0){
                     m_cursorCol--;
                 }
-            }else if(ch == KEY_UP){
+            }else if(ch == KEY_UP || ch == 3){
                 if(m_cursorRow > 0){
                     m_cursorRow--;
                     m_cursorCol = std::min((int)m_Buffer.getLine(m_cursorRow).length(), m_cursorCol);
                 }
-            }else if(ch == KEY_DOWN){
+            }else if(ch == KEY_DOWN || ch == 2){
                 if(m_cursorRow < m_Buffer.getLineCount() - 1){
                     m_cursorRow++;
                     m_cursorCol = std::min((int)m_Buffer.getLine(m_cursorRow).length(), m_cursorCol);
@@ -99,7 +102,7 @@ void Grim::run(){
                 m_mode = 'n';
             }
         }else if(m_mode == 'o'){
-            if(ch == KEY_BACKSPACE){
+            if(ch == KEY_BACKSPACE || ch == 7){
                 if(openFilename.size() > 0)
                     openFilename = openFilename.substr(0, openFilename.size()-1);
             }else if(ch >= 32){
@@ -110,7 +113,7 @@ void Grim::run(){
                 m_mode = 'n';
             }
         }else if(m_mode == 's'){
-            if(ch == KEY_BACKSPACE){
+            if(ch == KEY_BACKSPACE || ch == 7){
                 if(saveFilename.size() > 0)
                     saveFilename = saveFilename.substr(0, saveFilename.size()-1);
             }else if(ch >= 32){
@@ -123,7 +126,7 @@ void Grim::run(){
         }else if(m_mode == 'i'){
             if(ch == 27){ // ESC to exit insert mode
                 m_mode = 'n';
-            }else if(ch == KEY_BACKSPACE){
+            }else if(KEY_BACKSPACE || ch == 7){
                 if(m_cursorCol > 0){
                     m_Buffer.removeChar(m_cursorRow, m_cursorCol);
                     m_cursorCol--;
@@ -142,23 +145,23 @@ void Grim::run(){
                         }
                     }
                 }
-            }else if(ch == KEY_RIGHT){
+            }else if(ch == KEY_RIGHT || ch == 5){
                 if(m_cursorCol < (int)m_Buffer.getLine(m_cursorRow).length()){
                     m_cursorCol++;
                 }else if(m_Buffer.getLineCount()-1 > m_cursorRow){
                     m_cursorRow++;
                     m_cursorCol = 0;
                 }
-            }else if(ch == KEY_LEFT){
+            }else if(ch == KEY_LEFT || ch == 4){
                 if(m_cursorCol > 0){
                     m_cursorCol--;
                 }
-            }else if(ch == KEY_UP){
+            }else if(ch == KEY_UP || ch == 2){
                 if(m_cursorRow > 0){
                     m_cursorRow--;
                     m_cursorCol = std::min((int)m_Buffer.getLine(m_cursorRow).length(), m_cursorCol);
                 }
-            }else if(ch == KEY_DOWN){
+            }else if(ch == KEY_DOWN || ch == 2){
                 if(m_cursorRow < m_Buffer.getLineCount() - 1){
                     m_cursorRow++;
                     m_cursorCol = std::min((int)m_Buffer.getLine(m_cursorRow).length(), m_cursorCol);
@@ -181,17 +184,13 @@ void Grim::run(){
         wclear(mainWin);
         if(m_mode != 'q'){
             for(int row = 0; row < m_Buffer.getLineCount(); row++){
-                mvwprintw(mainWin, row, 0, m_Buffer.getLine(row).c_str());
+                mvwprintw(mainWin, row, 0, "%s", m_Buffer.getLine(row).c_str());
             }
         }else{
             mvwprintw(mainWin, 0, 0, "Press Escape to Quit...");
             mvwprintw(mainWin, 1, 0, "Press Enter to Return...");
             mvwprintw(mainWin, 3, 0, ("GRIM Text Editor "+m_version).c_str());
         }
-
-        // Position the cursor in the main window and refresh it
-        wmove(mainWin, m_cursorRow, m_cursorCol);
-        wrefresh(mainWin);
 
         // Update the footer window with status info and refresh it
         wclear(footer);
@@ -213,16 +212,19 @@ void Grim::run(){
                 fn = m_filename;
             }
 
-            mvwprintw(footer, 0, 0, "Filename: %s | Mode: %c | Cursor: %d, %d", fn.c_str(), m_mode, m_cursorRow, m_cursorCol);
+            mvwprintw(footer, 0, 0, "Filename: %s | Mode: %c | Cursor: %d, %d | Key code: %d" , fn.c_str(), m_mode, m_cursorRow, m_cursorCol, ch);
         }
         
         wattroff(footer, A_REVERSE);
         wrefresh(footer);
 
-        // Update the hardware cursor position on stdscr
-        move(m_cursorRow, m_cursorCol);
-        refresh();
+        // Position the cursor in the main window and refresh it
+        wmove(mainWin, m_cursorRow, m_cursorCol);
+        wrefresh(mainWin);
 
+        // This is unnecessary - already handled by wmove() and wrefresh() above
+        // move(m_cursorRow, m_cursorCol);
+        // refresh();
     }
     endwin();
 }
