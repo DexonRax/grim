@@ -1,7 +1,7 @@
 #include "grim.h"
 
 Grim::Grim(const std::string &filename)
-    : m_cursorRow(0), m_cursorCol(0), m_mode('n'), m_version("v0.8")
+    : m_cursorRow(0), m_cursorCol(0), m_mode('n'), m_version("v0.9.6.1")
 {
     m_filename.clear();
     // If a filename was passed, attempt to open and load it.
@@ -39,6 +39,44 @@ void Grim::saveFile(const std::string &filename){
     m_filename = filename;
 }
 
+bool Grim::executeCommand(const std::string &command){
+    int len = command.size();
+    
+    if (len > 1) {
+        int num = 0;
+        int numLen = 0;
+    
+        while (numLen < len && isdigit(command[numLen])) {
+            num = num * 10 + (command[numLen] - '0');
+            numLen++;
+        }
+
+        if (len == numLen + 1) {
+            if(command[numLen] == 'd'){
+                for (int i = 0; i < num; i++) {
+                    m_Buffer.removeLine(m_cursorRow);
+                }
+                if (m_Buffer.getLineCount() == 0) {
+                    m_Buffer.insertNewLine(0, 0);
+                }
+            }
+            return true;
+        }
+    
+        if (len == 2 && numLen == 0) {
+            if(command == "dd"){
+                m_Buffer.removeLine(m_cursorRow);
+                if (m_Buffer.getLineCount() == 0) {
+                    m_Buffer.insertNewLine(0, 0);
+                }
+            }
+            return true;
+        }
+    }
+    return false;
+    
+}
+
 void Grim::run(){
     initscr();
     //raw();
@@ -61,8 +99,12 @@ void Grim::run(){
 
     std::string saveFilename = "";
     std::string openFilename = "";
+
+    std::string command = "";
     char ch;
     while ((ch = wgetch(mainWin))) {
+        if(m_mode != 'n')
+            command = "";
         if(m_mode == 'n'){
             if(ch == 27){ // ESC exits
                 m_mode = 'q';
@@ -73,26 +115,34 @@ void Grim::run(){
                 saveFilename = m_filename;
             }else if(ch == 'o'){
                 m_mode = 'o';
-            }else if(ch == KEY_RIGHT || ch == 5){
+            }else if(ch == 5){ //RIGHT
                 if(m_cursorCol < (int)m_Buffer.getLine(m_cursorRow).length()){
                     m_cursorCol++;
                 }else if(m_Buffer.getLineCount()-1 > m_cursorRow){
                     m_cursorRow++;
                     m_cursorCol = 0;
                 }
-            }else if(ch == KEY_LEFT || ch == 4){
+            }else if(ch == 4){ //LEFT
                 if(m_cursorCol > 0){
                     m_cursorCol--;
                 }
-            }else if(ch == KEY_UP || ch == 3){
+            }else if(ch == 3){ //UP
                 if(m_cursorRow > 0){
                     m_cursorRow--;
                     m_cursorCol = std::min((int)m_Buffer.getLine(m_cursorRow).length(), m_cursorCol);
                 }
-            }else if(ch == KEY_DOWN || ch == 2){
+            }else if(ch == 2){ //DOWN
                 if(m_cursorRow < m_Buffer.getLineCount() - 1){
                     m_cursorRow++;
                     m_cursorCol = std::min((int)m_Buffer.getLine(m_cursorRow).length(), m_cursorCol);
+                }
+            }else if(ch == 7){
+                if(command.size() > 0)
+                    command.erase(command.size()-1, 1);
+            }else if(ch >= 32){
+                command += ch;
+                if(executeCommand(command)){
+                    command.clear();
                 }
             }
         }else if(m_mode == 'q'){
@@ -102,7 +152,7 @@ void Grim::run(){
                 m_mode = 'n';
             }
         }else if(m_mode == 'o'){
-            if(ch == KEY_BACKSPACE || ch == 7){
+            if(ch == 7){
                 if(openFilename.size() > 0)
                     openFilename = openFilename.substr(0, openFilename.size()-1);
             }else if(ch >= 32){
@@ -113,7 +163,7 @@ void Grim::run(){
                 m_mode = 'n';
             }
         }else if(m_mode == 's'){
-            if(ch == KEY_BACKSPACE || ch == 7){
+            if(ch == 7){
                 if(saveFilename.size() > 0)
                     saveFilename = saveFilename.substr(0, saveFilename.size()-1);
             }else if(ch >= 32){
@@ -126,7 +176,7 @@ void Grim::run(){
         }else if(m_mode == 'i'){
             if(ch == 27){ // ESC to exit insert mode
                 m_mode = 'n';
-            }else if(KEY_BACKSPACE || ch == 7){
+            }else if(ch == 7){
                 if(m_cursorCol > 0){
                     m_Buffer.removeChar(m_cursorRow, m_cursorCol);
                     m_cursorCol--;
@@ -145,23 +195,23 @@ void Grim::run(){
                         }
                     }
                 }
-            }else if(ch == KEY_RIGHT || ch == 5){
+            }else if(ch == 5){ //RIGHT
                 if(m_cursorCol < (int)m_Buffer.getLine(m_cursorRow).length()){
                     m_cursorCol++;
                 }else if(m_Buffer.getLineCount()-1 > m_cursorRow){
                     m_cursorRow++;
                     m_cursorCol = 0;
                 }
-            }else if(ch == KEY_LEFT || ch == 4){
+            }else if(ch == 4){ //LEFT
                 if(m_cursorCol > 0){
                     m_cursorCol--;
                 }
-            }else if(ch == KEY_UP || ch == 2){
+            }else if(ch == 3){ //UP
                 if(m_cursorRow > 0){
                     m_cursorRow--;
                     m_cursorCol = std::min((int)m_Buffer.getLine(m_cursorRow).length(), m_cursorCol);
                 }
-            }else if(ch == KEY_DOWN || ch == 2){
+            }else if(ch == 2){ //DOWN
                 if(m_cursorRow < m_Buffer.getLineCount() - 1){
                     m_cursorRow++;
                     m_cursorCol = std::min((int)m_Buffer.getLine(m_cursorRow).length(), m_cursorCol);
@@ -212,7 +262,7 @@ void Grim::run(){
                 fn = m_filename;
             }
 
-            mvwprintw(footer, 0, 0, "Filename: %s | Mode: %c | Cursor: %d, %d | Key code: %d" , fn.c_str(), m_mode, m_cursorRow, m_cursorCol, ch);
+            mvwprintw(footer, 0, 0, "Filename: %s | Mode: %c | Cursor: %d, %d | Key code: %d | Command: %s" , fn.c_str(), m_mode, m_cursorRow, m_cursorCol, ch, command.c_str());
         }
         
         wattroff(footer, A_REVERSE);

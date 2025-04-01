@@ -7,4 +7,4 @@ make<br>
 builds to build directory (makefile will generate it automatically)<br>
 <br>
 running:<br>
-make run or build/grim<br>
+make run or build/main.out<br>

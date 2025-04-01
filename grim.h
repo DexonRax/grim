@@ -4,10 +4,14 @@
 #include <ncurses.h>
 #include <fstream>
 #include <algorithm>
+#include <ctype.h>
+#include <stdio.h>
+#include <cmath>
 
 class Grim {
     private:
         Buffer m_Buffer;
+        Buffer m_CopyBuffer;
         int m_cursorRow;
         int m_cursorCol;
         char m_mode;
@@ -19,6 +23,7 @@ class Grim {
         void run();
         void saveFile(const std::string&);
         void openFile(const std::string&);
+        bool executeCommand(const std::string&);
 };
 
 #endif
