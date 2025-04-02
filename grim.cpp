@@ -1,7 +1,7 @@
 #include "grim.h"
 
 Grim::Grim(const std::string &filename)
-    : m_cursorRow(0), m_cursorCol(0), m_mode('n'), m_version("v0.9.6.1")
+    : m_cursorRow(0), m_cursorCol(0), m_mode('n'), m_version("v0.9.6.2")
 {
     m_filename.clear();
     // If a filename was passed, attempt to open and load it.
@@ -136,7 +136,7 @@ void Grim::run(){
                     m_cursorRow++;
                     m_cursorCol = std::min((int)m_Buffer.getLine(m_cursorRow).length(), m_cursorCol);
                 }
-            }else if(ch == 7){
+            }else if(ch == 7 || ch == 8){
                 if(command.size() > 0)
                     command.erase(command.size()-1, 1);
             }else if(ch >= 32){
@@ -152,7 +152,7 @@ void Grim::run(){
                 m_mode = 'n';
             }
         }else if(m_mode == 'o'){
-            if(ch == 7){
+            if(ch == 7 || ch == 8){
                 if(openFilename.size() > 0)
                     openFilename = openFilename.substr(0, openFilename.size()-1);
             }else if(ch >= 32){
@@ -163,7 +163,7 @@ void Grim::run(){
                 m_mode = 'n';
             }
         }else if(m_mode == 's'){
-            if(ch == 7){
+            if(ch == 7 || ch == 8){
                 if(saveFilename.size() > 0)
                     saveFilename = saveFilename.substr(0, saveFilename.size()-1);
             }else if(ch >= 32){
@@ -176,7 +176,7 @@ void Grim::run(){
         }else if(m_mode == 'i'){
             if(ch == 27){ // ESC to exit insert mode
                 m_mode = 'n';
-            }else if(ch == 7){
+            }else if(ch == 7 || ch == 8){ //Backspace
                 if(m_cursorCol > 0){
                     m_Buffer.removeChar(m_cursorRow, m_cursorCol);
                     m_cursorCol--;
