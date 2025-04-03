@@ -1,7 +1,7 @@
 #include "grim.h"
 
 Grim::Grim(const std::string &filename)
-    : m_cursorRow(0), m_cursorCol(0), m_mode('n'), m_version("v0.9.6.2")
+    : m_cursorRow(0), m_cursorCol(0), m_mode('n'), m_version("v0.9.6.4")
 {
     m_filename.clear();
     // If a filename was passed, attempt to open and load it.
@@ -20,9 +20,11 @@ void Grim::openFile(const std::string &filename){
             while (std::getline(file, line)) {
                 m_Buffer.addLine(line);
             }
+            m_filename = filename;
+        }else{
+            m_filename.clear();
+            //TODO: If file fails to open, you might want to show an error message here.
         }
-        m_filename = filename;
-        //TODO: If file fails to open, you might want to show an error message here.
     }else{
         m_Buffer.clear();
         m_Buffer.addLine("");
@@ -103,6 +105,15 @@ void Grim::run(){
     std::string command = "";
     char ch;
     while ((ch = wgetch(mainWin))) {
+        if(ch == -102){
+            getmaxyx(stdscr, rows, cols);
+            wresize(mainWin, rows - 1, cols);
+            werase(footer);
+            wresize(footer, 1, cols);
+            mvwin(footer, rows - 1, 0);
+            wrefresh(mainWin);
+            wrefresh(footer);
+        }
         if(m_mode != 'n')
             command = "";
         if(m_mode == 'n'){
@@ -152,7 +163,10 @@ void Grim::run(){
                 m_mode = 'n';
             }
         }else if(m_mode == 'o'){
-            if(ch == 7 || ch == 8){
+            if(ch == 27){ // ESC exits
+                openFilename = "";
+                m_mode = 'n';
+            }else if(ch == 7 || ch == 8){
                 if(openFilename.size() > 0)
                     openFilename = openFilename.substr(0, openFilename.size()-1);
             }else if(ch >= 32){
@@ -163,7 +177,10 @@ void Grim::run(){
                 m_mode = 'n';
             }
         }else if(m_mode == 's'){
-            if(ch == 7 || ch == 8){
+            if(ch == 27){ // ESC exits
+                openFilename = "";
+                m_mode = 'n';
+            }else if(ch == 7 || ch == 8){
                 if(saveFilename.size() > 0)
                     saveFilename = saveFilename.substr(0, saveFilename.size()-1);
             }else if(ch >= 32){
