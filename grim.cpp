@@ -1,7 +1,7 @@
 #include "grim.h"
 
 Grim::Grim(const std::string &filename)
-    : m_cursorRow(0), m_cursorCol(0), m_mode('n'), m_version("v0.9.6.4")
+    : m_cursorRow(0), m_cursorCol(0), m_mode('n'), m_version("v0.9.7.0")
 {
     m_filename.clear();
     // If a filename was passed, attempt to open and load it.
@@ -105,7 +105,12 @@ void Grim::run(){
     std::string command = "";
     char ch;
     while ((ch = wgetch(mainWin))) {
-        if(ch == -102){
+        if(m_mode != 'n'){
+            command = "";
+        }
+
+
+        if(ch == -102){ //Window resize
             getmaxyx(stdscr, rows, cols);
             wresize(mainWin, rows - 1, cols);
             werase(footer);
@@ -114,86 +119,68 @@ void Grim::run(){
             wrefresh(mainWin);
             wrefresh(footer);
         }
-        if(m_mode != 'n')
-            command = "";
-        if(m_mode == 'n'){
-            if(ch == 27){ // ESC exits
+
+
+        if(ch == 27){ //Escape
+            if(m_mode == 'n'){
                 m_mode = 'q';
-            }else if(ch == 'i'){
+            }else if(m_mode == 'q'){
+                break;
+            }else if(m_mode == 'o' || m_mode == 's'){
+                openFilename.clear();
+                m_mode = 'n';
+            }else if(m_mode == 'i'){
+                m_mode = 'n';
+            }
+        }
+
+
+        if(m_mode == 'n'){
+            if(ch == 'i'){
                 m_mode = 'i';
             }else if(ch == 's'){
                 m_mode = 's';
                 saveFilename = m_filename;
             }else if(ch == 'o'){
                 m_mode = 'o';
-            }else if(ch == 5){ //RIGHT
-                if(m_cursorCol < (int)m_Buffer.getLine(m_cursorRow).length()){
-                    m_cursorCol++;
-                }else if(m_Buffer.getLineCount()-1 > m_cursorRow){
-                    m_cursorRow++;
-                    m_cursorCol = 0;
-                }
-            }else if(ch == 4){ //LEFT
-                if(m_cursorCol > 0){
-                    m_cursorCol--;
-                }
-            }else if(ch == 3){ //UP
-                if(m_cursorRow > 0){
-                    m_cursorRow--;
-                    m_cursorCol = std::min((int)m_Buffer.getLine(m_cursorRow).length(), m_cursorCol);
-                }
-            }else if(ch == 2){ //DOWN
-                if(m_cursorRow < m_Buffer.getLineCount() - 1){
-                    m_cursorRow++;
-                    m_cursorCol = std::min((int)m_Buffer.getLine(m_cursorRow).length(), m_cursorCol);
-                }
-            }else if(ch == 7 || ch == 8){
+            }
+        }
+
+
+        if(ch == 5){ //RIGHT
+            if(m_cursorCol < (int)m_Buffer.getLine(m_cursorRow).length()){
+                m_cursorCol++;
+            }else if(m_Buffer.getLineCount()-1 > m_cursorRow){
+                m_cursorRow++;
+                m_cursorCol = 0;
+            }
+        }else if(ch == 4){ //LEFT
+            if(m_cursorCol > 0){
+                m_cursorCol--;
+            }
+        }else if(ch == 3){ //UP
+            if(m_cursorRow > 0){
+                m_cursorRow--;
+                m_cursorCol = std::min((int)m_Buffer.getLine(m_cursorRow).length(), m_cursorCol);
+            }
+        }else if(ch == 2){ //DOWN
+            if(m_cursorRow < m_Buffer.getLineCount() - 1){
+                m_cursorRow++;
+                m_cursorCol = std::min((int)m_Buffer.getLine(m_cursorRow).length(), m_cursorCol);
+            }
+
+
+        }else if(ch == 7 || ch == 8){ //Backspace
+            if(m_mode == 'n'){
                 if(command.size() > 0)
                     command.erase(command.size()-1, 1);
-            }else if(ch >= 32){
-                command += ch;
-                if(executeCommand(command)){
-                    command.clear();
-                }
-            }
-        }else if(m_mode == 'q'){
-            if(ch == 27){ //Escape key
-                break;
-            }else if(ch == 10){ // Enter key
-                m_mode = 'n';
-            }
-        }else if(m_mode == 'o'){
-            if(ch == 27){ // ESC exits
-                openFilename = "";
-                m_mode = 'n';
-            }else if(ch == 7 || ch == 8){
+            }else if(m_mode == 'o'){
                 if(openFilename.size() > 0)
                     openFilename = openFilename.substr(0, openFilename.size()-1);
-            }else if(ch >= 32){
-                openFilename += ch;
-            }else if(ch == 10){ //Enter key
-                openFile(openFilename);
-                openFilename = "";
-                m_mode = 'n';
-            }
-        }else if(m_mode == 's'){
-            if(ch == 27){ // ESC exits
-                openFilename = "";
-                m_mode = 'n';
-            }else if(ch == 7 || ch == 8){
+            }else if(m_mode == 's'){
                 if(saveFilename.size() > 0)
                     saveFilename = saveFilename.substr(0, saveFilename.size()-1);
-            }else if(ch >= 32){
-                saveFilename += ch;
-            }else if(ch == 10){
-                saveFile(saveFilename);
-                m_filename = saveFilename;
-                m_mode = 'n';
-            }
-        }else if(m_mode == 'i'){
-            if(ch == 27){ // ESC to exit insert mode
-                m_mode = 'n';
-            }else if(ch == 7 || ch == 8){ //Backspace
+            }else if(m_mode == 'i'){
                 if(m_cursorCol > 0){
                     m_Buffer.removeChar(m_cursorRow, m_cursorCol);
                     m_cursorCol--;
@@ -212,39 +199,49 @@ void Grim::run(){
                         }
                     }
                 }
-            }else if(ch == 5){ //RIGHT
-                if(m_cursorCol < (int)m_Buffer.getLine(m_cursorRow).length()){
-                    m_cursorCol++;
-                }else if(m_Buffer.getLineCount()-1 > m_cursorRow){
-                    m_cursorRow++;
-                    m_cursorCol = 0;
-                }
-            }else if(ch == 4){ //LEFT
-                if(m_cursorCol > 0){
-                    m_cursorCol--;
-                }
-            }else if(ch == 3){ //UP
-                if(m_cursorRow > 0){
-                    m_cursorRow--;
-                    m_cursorCol = std::min((int)m_Buffer.getLine(m_cursorRow).length(), m_cursorCol);
-                }
-            }else if(ch == 2){ //DOWN
-                if(m_cursorRow < m_Buffer.getLineCount() - 1){
-                    m_cursorRow++;
-                    m_cursorCol = std::min((int)m_Buffer.getLine(m_cursorRow).length(), m_cursorCol);
-                }
-            }else if(ch == 10){ // Enter key
+            }
+
+
+        }else if(ch == 10){ // Enter key
+            if(m_mode == 'q'){
+                m_mode = 'n';
+            }else if(m_mode == 'o'){
+                openFile(openFilename);
+                openFilename.clear();
+                m_mode = 'n';
+            }else if(m_mode == 's'){
+                saveFile(saveFilename);
+                m_filename = saveFilename;
+                m_mode = 'n';
+            }else if(m_mode == 'i'){
                 m_Buffer.insertNewLine(m_cursorRow, m_cursorCol);
                 m_cursorRow++;
                 m_cursorCol = 0;
-            }else if(ch == 9){ // Tab key
+            }
+
+        }else if(ch == 9){ // Tab key
+            if(m_mode == 'i'){
                 std::string tab = "    ";
                 m_Buffer.insertString(tab, m_cursorRow, m_cursorCol);
                 m_cursorCol += tab.length();
-            }else if(ch >= 32){
+            }
+
+
+        }else if(ch >= 32){
+            if(m_mode == 'n'){
+                command += ch;
+                if(executeCommand(command)){
+                    command.clear();
+                }
+            }else if(m_mode == 'o'){
+                openFilename += ch;
+            }else if(m_mode == 's'){
+                saveFilename += ch;
+            }else if(m_mode == 'i'){
                 m_Buffer.insertChar(ch, m_cursorRow, m_cursorCol);
                 m_cursorCol++;
             }
+
         }
 
         // Clear and redraw the main window with the text buffer
