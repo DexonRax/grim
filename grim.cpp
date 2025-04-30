@@ -1,11 +1,10 @@
 #include "grim.h"
 
 Grim::Grim(const std::string &filename)
-    : m_cursorRow(0), m_cursorCol(0), m_mode('n'), m_version("v0.9.7.0")
+    : m_cursorRow(0), m_cursorCol(0), m_mode('n'), m_version("v0.9.7.2")
 {
     m_filename.clear();
     // If a filename was passed, attempt to open and load it.
-    
     openFile(filename);
 }
 
@@ -23,7 +22,7 @@ void Grim::openFile(const std::string &filename){
             m_filename = filename;
         }else{
             m_filename.clear();
-            //TODO: If file fails to open, you might want to show an error message here.
+            //TODO: If file fails to open show an error message here.
         }
     }else{
         m_Buffer.clear();
@@ -135,35 +134,23 @@ void Grim::run(){
         }
 
 
-        if(m_mode == 'n'){
-            if(ch == 'i'){
-                m_mode = 'i';
-            }else if(ch == 's'){
-                m_mode = 's';
-                saveFilename = m_filename;
-            }else if(ch == 'o'){
-                m_mode = 'o';
-            }
-        }
-
-
-        if(ch == 5){ //RIGHT
+        else if(ch == 5 && (m_mode == 'n' || m_mode == 'i')){ //RIGHT
             if(m_cursorCol < (int)m_Buffer.getLine(m_cursorRow).length()){
                 m_cursorCol++;
             }else if(m_Buffer.getLineCount()-1 > m_cursorRow){
                 m_cursorRow++;
                 m_cursorCol = 0;
             }
-        }else if(ch == 4){ //LEFT
+        }else if(ch == 4 && (m_mode == 'n' || m_mode == 'i')){ //LEFT
             if(m_cursorCol > 0){
                 m_cursorCol--;
             }
-        }else if(ch == 3){ //UP
+        }else if(ch == 3 && (m_mode == 'n' || m_mode == 'i')){ //UP
             if(m_cursorRow > 0){
                 m_cursorRow--;
                 m_cursorCol = std::min((int)m_Buffer.getLine(m_cursorRow).length(), m_cursorCol);
             }
-        }else if(ch == 2){ //DOWN
+        }else if(ch == 2 && (m_mode == 'n' || m_mode == 'i')){ //DOWN
             if(m_cursorRow < m_Buffer.getLineCount() - 1){
                 m_cursorRow++;
                 m_cursorCol = std::min((int)m_Buffer.getLine(m_cursorRow).length(), m_cursorCol);
@@ -228,20 +215,28 @@ void Grim::run(){
 
 
         }else if(ch >= 32){
-            if(m_mode == 'n'){
-                command += ch;
-                if(executeCommand(command)){
-                    command.clear();
-                }
-            }else if(m_mode == 'o'){
+            if(m_mode == 'o'){
                 openFilename += ch;
             }else if(m_mode == 's'){
                 saveFilename += ch;
             }else if(m_mode == 'i'){
                 m_Buffer.insertChar(ch, m_cursorRow, m_cursorCol);
                 m_cursorCol++;
+            }else if(m_mode == 'n'){
+                if(ch == 'i'){
+                    m_mode = 'i';
+                }else if(ch == 's'){
+                    m_mode = 's';
+                    saveFilename = m_filename;
+                }else if(ch == 'o'){
+                    m_mode = 'o';
+                }else{
+                    command += ch;
+                    if(executeCommand(command)){
+                        command.clear();
+                    }
+                }
             }
-
         }
 
         // Clear and redraw the main window with the text buffer
