@@ -68,7 +68,7 @@ bool Grim::executeCommand(const std::string &command){
             if(command == "dd"){
                 m_Buffer.removeLine(m_cursorRow);
                 if (m_Buffer.getLineCount() == 0) {
-                    m_Buffer.insertNewLine(0, 0);
+                    m_Buffer.addLine("");
                 }
             }
             return true;
@@ -239,7 +239,6 @@ void Grim::run(){
             }
         }
 
-        // Clear and redraw the main window with the text buffer
         wclear(mainWin);
         if(m_mode != 'q'){
             for(int row = 0; row < m_Buffer.getLineCount(); row++){
@@ -251,7 +250,6 @@ void Grim::run(){
             mvwprintw(mainWin, 3, 0, ("GRIM Text Editor "+m_version).c_str());
         }
 
-        // Update the footer window with status info and refresh it
         wclear(footer);
         wattron(footer, A_REVERSE);
 
